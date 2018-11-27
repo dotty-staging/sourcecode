@@ -1,9 +1,20 @@
 language: scala
 sudo: required
 dist: trusty
-addons:
-  apt:
-    update: true
+stages:
+  - name: test
+  - name: release
+    if: (branch = master AND type = push) OR (tag IS present)
+script: sbt "++$TRAVIS_SCALA_VERSION test"
+jobs:
+  include:
+    - scala: 2.10.7
+    - scala: 2.11.12
+      before_install:
+        - curl https://raw.githubusercontent.com/scala-native/scala-native/master/scripts/travis_setup.sh | bash -x
+    - scala: 2.12.6
+    - scala: 2.13.0-M5
+    - scala: 0.10.0 # dotty
 
 jdk:
   - oraclejdk8
