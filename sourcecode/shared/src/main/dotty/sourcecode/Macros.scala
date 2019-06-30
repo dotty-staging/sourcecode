@@ -60,12 +60,12 @@ trait ArgsMacros {
 }
 
 object Util{
-  def isSynthetic(c: Reflection)(s: c.Symbol) = isSyntheticName(getName(c)(s))
+  def isSynthetic(qctx: QuoteContext)(s: qctx.tasty.Symbol) = isSyntheticName(getName(qctx)(s))
   def isSyntheticName(name: String) = {
     name == "<init>" || (name.startsWith("<local ") && name.endsWith(">"))
   }
-  def getName(c: Reflection)(s: c.Symbol) = {
-    import c._
+  def getName(qctx: QuoteContext)(s: qctx.tasty.Symbol) = {
+    import qctx.tasty._
     s.name.trim
       .stripSuffix("$") // meh
   }
@@ -73,20 +73,20 @@ object Util{
 
 object Macros {
 
-  def actualOwner(c: Reflection)(owner: c.Symbol): c.Symbol = {
-    import c._
+  def actualOwner(qctx: QuoteContext)(owner: qctx.tasty.Symbol): qctx.tasty.Symbol = {
+    import qctx.tasty._
     var owner0 = owner
     // second condition is meh
-    while(Util.isSynthetic(c)(owner0) || Util.getName(c)(owner0) == "ev") {
+    while(Util.isSynthetic(qctx)(owner0) || Util.getName(qctx)(owner0) == "ev") {
       owner0 = owner0.owner
     }
     owner0
   }
 
-  def nameImpl(implicit c: Reflection): Expr[Name] = {
-    import c._
-    val owner = actualOwner(c)(c.rootContext.owner)
-    val simpleName = Util.getName(c)(owner)
+  def nameImpl(implicit qctx: QuoteContext): Expr[Name] = {
+    import qctx.tasty._
+    val owner = actualOwner(qctx)(rootContext.owner)
+    val simpleName = Util.getName(qctx)(owner)
     '{Name(${simpleName.toExpr})}
   }
 
@@ -97,16 +97,16 @@ object Macros {
     else
       s
 
-  def nameMachineImpl(implicit c: Reflection): Expr[Name.Machine] = {
-    import c._
-    val owner = c.rootContext.owner
-    val simpleName = adjustName(Util.getName(c)(owner))
+  def nameMachineImpl(implicit qctx: QuoteContext): Expr[Name.Machine] = {
+    import qctx.tasty._
+    val owner = rootContext.owner
+    val simpleName = adjustName(Util.getName(qctx)(owner))
     '{Name.Machine(${simpleName.toExpr})}
   }
 
-  def fullNameImpl(implicit c: Reflection): Expr[FullName] = {
-    import c._
-    val owner = actualOwner(c)(c.rootContext.owner)
+  def fullNameImpl(implicit qctx: QuoteContext): Expr[FullName] = {
+    import qctx.tasty._
+    val owner = actualOwner(qctx)(rootContext.owner)
     val fullName =
       owner.fullName.trim
         .split("\\.", -1)
@@ -116,9 +116,9 @@ object Macros {
     '{FullName(${fullName.toExpr})}
   }
 
-  def fullNameMachineImpl(implicit c: Reflection): Expr[FullName.Machine] = {
-    import c._
-    val owner = c.rootContext.owner
+  def fullNameMachineImpl(implicit qctx: QuoteContext): Expr[FullName.Machine] = {
+    import qctx.tasty._
+    val owner = rootContext.owner
     val fullName = owner.fullName.trim
       .split("\\.", -1)
       .map(_.stripPrefix("_$").stripSuffix("$")) // meh
@@ -127,34 +127,34 @@ object Macros {
     '{FullName.Machine(${fullName.toExpr})}
   }
 
-  def fileImpl(implicit c: Reflection): Expr[sourcecode.File] = {
-    import c._
-    val file = c.rootPosition.sourceFile.jpath.toAbsolutePath.toString
+  def fileImpl(implicit qctx: QuoteContext): Expr[sourcecode.File] = {
+    import qctx.tasty._
+    val file = rootPosition.sourceFile.jpath.toAbsolutePath.toString
     '{sourcecode.File(${file.toExpr})}
   }
 
-  def lineImpl(implicit c: Reflection): Expr[sourcecode.Line] = {
-    import c._
-    val line = c.rootPosition.startLine + 1
+  def lineImpl(implicit qctx: QuoteContext): Expr[sourcecode.Line] = {
+    import qctx.tasty._
+    val line = rootPosition.startLine + 1
     '{sourcecode.Line(${line.toExpr})}
   }
 
-  def enclosingImpl(implicit c: Reflection): Expr[Enclosing] = {
-    val path = enclosing(c)(
-      !Util.isSynthetic(c)(_)
+  def enclosingImpl(implicit qctx: QuoteContext): Expr[Enclosing] = {
+    val path = enclosing(qctx)(
+      !Util.isSynthetic(qctx)(_)
     )
 
     '{Enclosing(${path.toExpr})}
   }
 
-  def enclosingMachineImpl(implicit c: Reflection): Expr[Enclosing.Machine] = {
-    val path = enclosing(c, machine = true)(_ => true)
+  def enclosingMachineImpl(implicit qctx: QuoteContext): Expr[Enclosing.Machine] = {
+    val path = enclosing(qctx, machine = true)(_ => true)
     '{Enclosing.Machine(${path.toExpr})}
   }
 
-  def pkgImpl(implicit c: Reflection): Expr[Pkg] = {
-    import c._
-    val path = enclosing(c) {
+  def pkgImpl(implicit qctx: QuoteContext): Expr[Pkg] = {
+    import qctx.tasty._
+    val path = enclosing(qctx) {
       case IsPackageDefSymbol(_) => true
       case _ => false
     }
@@ -162,11 +162,11 @@ object Macros {
     '{Pkg(${path.toExpr})}
   }
 
-  def argsImpl(implicit c: Reflection): Expr[Args] = {
-    import c._
+  def argsImpl(implicit qctx: QuoteContext): Expr[Args] = {
+    import qctx.tasty._
 
-    val param: List[List[c.ValDef]] = {
-      def nearestEnclosingMethod(owner: c.Symbol): List[List[c.ValDef]] =
+    val param: List[List[ValDef]] = {
+      def nearestEnclosingMethod(owner: Symbol): List[List[ValDef]] =
         owner match {
           case IsDefDefSymbol(defSym) =>
             defSym.tree.paramss
@@ -176,7 +176,7 @@ object Macros {
             nearestEnclosingMethod(owner.owner)
         }
 
-      nearestEnclosingMethod(c.rootContext.owner)
+      nearestEnclosingMethod(rootContext.owner)
     }
 
     val texts0 = param.map(_.foldRight('{List.empty[Text[_]]}) {
@@ -192,8 +192,8 @@ object Macros {
   }
 
 
-  def text[T: Type](v: Expr[T])(implicit c: Reflection): Expr[sourcecode.Text[T]] = {
-    import c._
+  def text[T: Type](v: Expr[T])(implicit qctx: QuoteContext): Expr[sourcecode.Text[T]] = {
+    import qctx.tasty._
     val txt = v.unseal.pos.sourceCode
     '{sourcecode.Text[T]($v, ${txt.toExpr})}
   }
@@ -206,12 +206,12 @@ object Macros {
 
   }
 
-  def enclosing(c: Reflection, machine: Boolean = false)(filter: c.Symbol => Boolean): String = {
+  def enclosing(qctx: QuoteContext, machine: Boolean = false)(filter: qctx.tasty.Symbol => Boolean): String = {
+    import qctx.tasty._
 
-    import c._
-    var current = c.rootContext.owner
+    var current = rootContext.owner
     if (!machine)
-      current = actualOwner(c)(current)
+      current = actualOwner(qctx)(current)
     var path = List.empty[Chunk]
     while(current.toString != "NoSymbol" && current != definitions.RootPackage && current != definitions.RootClass){
       if (filter(current)) {
@@ -234,9 +234,9 @@ object Macros {
         //   case x if x.flags.isTerm && x.asTerm.isVal => Chunk.ValVarLzyDef
         // }
         //
-        // path = chunk(Util.getName(c)(current)) :: path
+        // path = chunk(Util.getName(qctx)(current)) :: path
 
-        path = chunk(Util.getName(c)(current).stripSuffix("$")) :: path
+        path = chunk(Util.getName(qctx)(current).stripSuffix("$")) :: path
       }
       current = current.owner
     }
