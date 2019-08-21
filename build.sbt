@@ -1,17 +1,16 @@
 import sbtcrossproject.{crossProject, CrossType}
 import OsgiKeys._
 
-val scala210 = "2.10.7"
 val scala211 = "2.11.12"
-val scala212 = "2.12.6"
-val scala213 = "2.13.0-M5"
-val dotty = "0.12.0-bin-20181127-235a103-NIGHTLY"
+val scala212 = "2.12.8"
+val scala213 = "2.13.0"
+val dotty    = "0.18.0-bin-SNAPSHOT"
 
 inThisBuild(List(
   organization := "com.lihaoyi",
   name := "sourcecode",
-  scalaVersion := scala211,
-  crossScalaVersions := Seq(scala210, scala211, scala212, scala213),
+  scalaVersion := scala213,
+  crossScalaVersions := Seq(scala211, scala212, scala213),
   homepage := Some(url("https://github.com/lihaoyi/sourcecode")),
   licenses := Seq("MIT" -> url("http://www.opensource.org/licenses/mit-license.html")),
   developers += Developer(
@@ -29,37 +28,29 @@ def macroDependencies(version: String) =
   Seq(
     "org.scala-lang" % "scala-reflect" % version % "provided",
     "org.scala-lang" % "scala-compiler" % version % "provided"
-  ) ++
-    (if (version startsWith "2.10.")
-      Seq(compilerPlugin("org.scalamacros" % s"paradise" % "2.1.0" cross CrossVersion.full),
-        "org.scalamacros" %% s"quasiquotes" % "2.1.0")
-    else
-      Seq())
+  )
 
-lazy val sourcecode = crossProject(JSPlatform, JVMPlatform, NativePlatform)
+lazy val sourcecode = (project in file ("sourcecode"))
   .settings(
     libraryDependencies ++= {
       if (isDotty.value) Nil else macroDependencies(scalaVersion.value)
     },
     test in Test := (run in Test).toTask("").value,
     unmanagedSourceDirectories in Compile ++= {
-      val crossVer = CrossVersion.partialVersion(scalaVersion.value)
-
-      val scala211plus = crossVer match {
-        case Some((2, n)) if n >= 11 =>
-          Seq(baseDirectory.value / ".." / "shared" / "src" / "main" / "scala-2.11+")
-        case _ =>
-          Seq()
-      }
-
-      val scala2OrDotty = crossVer match {
-        case Some((2, _)) =>
-          Seq(baseDirectory.value / ".." / "shared" / "src" / "main" / "scala-2.x")
-        case _ =>
-          Seq(baseDirectory.value / ".." / "shared" / "src" / "main" / "dotty")
-      }
-
-      scala211plus ++ scala2OrDotty
+      Seq(baseDirectory.value / "src") ++ (
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((2, _)) => Seq(baseDirectory.value / "src-2.x")
+        case Some((0, _)) => Seq(baseDirectory.value / "src-dotty")
+        case _            => Nil
+      })
+    },
+    unmanagedSourceDirectories in Test ++= {
+      Seq(baseDirectory.value / "test" / "src") ++ (
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((2, _)) => Seq(baseDirectory.value / "test" / "src-2.x")
+        case Some((0, _)) => Seq(baseDirectory.value / "test" / "src-dotty")
+        case _            => Nil
+      })
     },
     // Osgi settings
     osgiSettings,
@@ -68,16 +59,3 @@ lazy val sourcecode = crossProject(JSPlatform, JVMPlatform, NativePlatform)
     dynamicImportPackage := Seq("*")
   )
   .enablePlugins(SbtOsgi)
-  .jvmSettings(
-    crossScalaVersions += dotty
-  )
-  .jsSettings(
-    scalaJSUseMainModuleInitializer in Test := true // use JVM-style main.
-  )
-  .nativeSettings(
-    crossScalaVersions := Seq(scala211)
-  )
-
-lazy val js = sourcecode.js
-lazy val jvm = sourcecode.jvm
-lazy val native = sourcecode.native

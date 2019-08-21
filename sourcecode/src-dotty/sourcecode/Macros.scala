@@ -111,7 +111,7 @@ object Macros {
       owner.fullName.trim
         .split("\\.", -1)
         .filterNot(Util.isSyntheticName)
-        .map(_.stripPrefix("_$").stripSuffix("$")) // meh
+        .map(_.split("_\\$", -1).dropWhile(_.isEmpty).mkString.stripSuffix("$")) // meh
         .mkString(".")
     '{FullName(${fullName.toExpr})}
   }
