@@ -87,7 +87,7 @@ object Macros {
     import qctx.tasty._
     val owner = actualOwner(qctx)(rootContext.owner)
     val simpleName = Util.getName(qctx)(owner)
-    '{Name(${simpleName.toExpr})}
+    '{Name(${Expr(simpleName)})}
   }
 
   private def adjustName(s: String): String =
@@ -101,7 +101,7 @@ object Macros {
     import qctx.tasty._
     val owner = rootContext.owner
     val simpleName = adjustName(Util.getName(qctx)(owner))
-    '{Name.Machine(${simpleName.toExpr})}
+    '{Name.Machine(${Expr(simpleName)})}
   }
 
   def fullNameImpl(implicit qctx: QuoteContext): Expr[FullName] = {
@@ -113,7 +113,7 @@ object Macros {
         .filterNot(Util.isSyntheticName)
         .map(_.split("_\\$", -1).dropWhile(_.isEmpty).mkString.stripSuffix("$")) // meh
         .mkString(".")
-    '{FullName(${fullName.toExpr})}
+    '{FullName(${Expr(fullName)})}
   }
 
   def fullNameMachineImpl(implicit qctx: QuoteContext): Expr[FullName.Machine] = {
@@ -124,19 +124,19 @@ object Macros {
       .map(_.stripPrefix("_$").stripSuffix("$")) // meh
       .map(adjustName)
       .mkString(".")
-    '{FullName.Machine(${fullName.toExpr})}
+    '{FullName.Machine(${Expr(fullName)})}
   }
 
   def fileImpl(implicit qctx: QuoteContext): Expr[sourcecode.File] = {
     import qctx.tasty._
     val file = rootPosition.sourceFile.jpath.toAbsolutePath.toString
-    '{sourcecode.File(${file.toExpr})}
+    '{sourcecode.File(${Expr(file)})}
   }
 
   def lineImpl(implicit qctx: QuoteContext): Expr[sourcecode.Line] = {
     import qctx.tasty._
     val line = rootPosition.startLine + 1
-    '{sourcecode.Line(${line.toExpr})}
+    '{sourcecode.Line(${Expr(line)})}
   }
 
   def enclosingImpl(implicit qctx: QuoteContext): Expr[Enclosing] = {
@@ -144,12 +144,12 @@ object Macros {
       !Util.isSynthetic(qctx)(_)
     )
 
-    '{Enclosing(${path.toExpr})}
+    '{Enclosing(${Expr(path)})}
   }
 
   def enclosingMachineImpl(implicit qctx: QuoteContext): Expr[Enclosing.Machine] = {
     val path = enclosing(qctx, machine = true)(_ => true)
-    '{Enclosing.Machine(${path.toExpr})}
+    '{Enclosing.Machine(${Expr(path)})}
   }
 
   def pkgImpl(implicit qctx: QuoteContext): Expr[Pkg] = {
@@ -159,7 +159,7 @@ object Macros {
       case _ => false
     }
 
-    '{Pkg(${path.toExpr})}
+    '{Pkg(${Expr(path)})}
   }
 
   def argsImpl(implicit qctx: QuoteContext): Expr[Args] = {
@@ -181,7 +181,7 @@ object Macros {
 
     val texts0 = param.map(_.foldRight('{List.empty[Text[_]]}) {
       case (vd @ ValDef(nme, _, optV), l) =>
-        '{Text(${optV.fold('None)(_.seal)}, ${nme.toExpr}) :: $l}
+        '{Text(${optV.fold('None)(_.seal)}, ${Expr(nme)}) :: $l}
     })
     val texts = texts0.foldRight('{List.empty[List[Text[_]]]}) {
       case (l, acc) =>
@@ -195,7 +195,7 @@ object Macros {
   def text[T: Type](v: Expr[T])(implicit qctx: QuoteContext): Expr[sourcecode.Text[T]] = {
     import qctx.tasty._
     val txt = v.unseal.pos.sourceCode
-    '{sourcecode.Text[T]($v, ${txt.toExpr})}
+    '{sourcecode.Text[T]($v, ${Expr(txt)})}
   }
 
   sealed trait Chunk
