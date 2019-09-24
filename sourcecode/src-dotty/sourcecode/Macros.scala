@@ -154,11 +154,7 @@ object Macros {
 
   def pkgImpl(implicit qctx: QuoteContext): Expr[Pkg] = {
     import qctx.tasty._
-    val path = enclosing(qctx) {
-      case IsPackageDefSymbol(_) => true
-      case _ => false
-    }
-
+    val path = enclosing(qctx)(_.isPackageDef)
     '{Pkg(${Expr(path)})}
   }
 
@@ -167,17 +163,15 @@ object Macros {
 
     val param: List[List[ValDef]] = {
       def nearestEnclosingMethod(owner: Symbol): List[List[ValDef]] =
-        owner match {
-          case IsDefDefSymbol(defSym) =>
-            val IsDefDef(ddef) = defSym.tree
-            ddef.paramss
-          case IsClassDefSymbol(classSym) =>
-            val IsClassDef(cdef) = classSym.tree
-            cdef.constructor.paramss
-          case _ =>
-            nearestEnclosingMethod(owner.owner)
+        if (owner.isDefDef) {
+          val IsDefDef(ddef) = owner.tree
+          ddef.paramss
+        } else if (owner.isClassDef) {
+          val IsClassDef(cdef) = owner.tree
+          cdef.constructor.paramss
+        } else {
+          nearestEnclosingMethod(owner.owner)
         }
-
       nearestEnclosingMethod(rootContext.owner)
     }
 
@@ -218,11 +212,7 @@ object Macros {
     while(current.toString != "NoSymbol" && current != defn.RootPackage && current != defn.RootClass){
       if (filter(current)) {
 
-        val chunk = current match {
-          case IsValDefSymbol(_) => Chunk.ValVarLzyDef
-          case IsDefDefSymbol(_) => Chunk.ValVarLzyDef
-          case _ => Chunk.PkgObj
-        }
+        val chunk = if (current.isValDef || current.isDefDef) Chunk.ValVarLzyDef else Chunk.PkgObj
 
         // TODO
         // val chunk = current match {
