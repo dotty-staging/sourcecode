@@ -169,9 +169,11 @@ object Macros {
       def nearestEnclosingMethod(owner: Symbol): List[List[ValDef]] =
         owner match {
           case IsDefDefSymbol(defSym) =>
-            defSym.tree.paramss
+            val IsDefDef(ddef) = defSym.tree
+            ddef.paramss
           case IsClassDefSymbol(classSym) =>
-            classSym.tree.constructor.paramss
+            val IsClassDef(cdef) = classSym.tree
+            cdef.constructor.paramss
           case _ =>
             nearestEnclosingMethod(owner.owner)
         }
