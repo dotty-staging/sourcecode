@@ -65,7 +65,7 @@ object Util{
     name == "<init>" || (name.startsWith("<local ") && name.endsWith(">"))
   }
   def getName(qctx: QuoteContext)(s: qctx.tasty.Symbol) = {
-    import qctx.tasty._
+    import qctx.tasty.{_, given}
     s.name.trim
       .stripSuffix("$") // meh
   }
@@ -74,7 +74,7 @@ object Util{
 object Macros {
 
   def actualOwner(qctx: QuoteContext)(owner: qctx.tasty.Symbol): qctx.tasty.Symbol = {
-    import qctx.tasty._
+    import qctx.tasty.{_, given}
     var owner0 = owner
     // second condition is meh
     while(Util.isSynthetic(qctx)(owner0) || Util.getName(qctx)(owner0) == "ev") {
@@ -84,7 +84,7 @@ object Macros {
   }
 
   def nameImpl(implicit qctx: QuoteContext): Expr[Name] = {
-    import qctx.tasty._
+    import qctx.tasty.{_, given}
     val owner = actualOwner(qctx)(rootContext.owner)
     val simpleName = Util.getName(qctx)(owner)
     '{Name(${Expr(simpleName)})}
@@ -98,14 +98,14 @@ object Macros {
       s
 
   def nameMachineImpl(implicit qctx: QuoteContext): Expr[Name.Machine] = {
-    import qctx.tasty._
+    import qctx.tasty.{_, given}
     val owner = rootContext.owner
     val simpleName = adjustName(Util.getName(qctx)(owner))
     '{Name.Machine(${Expr(simpleName)})}
   }
 
   def fullNameImpl(implicit qctx: QuoteContext): Expr[FullName] = {
-    import qctx.tasty._
+    import qctx.tasty.{_, given}
     val owner = actualOwner(qctx)(rootContext.owner)
     val fullName =
       owner.fullName.trim
@@ -117,7 +117,7 @@ object Macros {
   }
 
   def fullNameMachineImpl(implicit qctx: QuoteContext): Expr[FullName.Machine] = {
-    import qctx.tasty._
+    import qctx.tasty.{_, given}
     val owner = rootContext.owner
     val fullName = owner.fullName.trim
       .split("\\.", -1)
@@ -128,13 +128,13 @@ object Macros {
   }
 
   def fileImpl(implicit qctx: QuoteContext): Expr[sourcecode.File] = {
-    import qctx.tasty._
+    import qctx.tasty.{_, given}
     val file = rootPosition.sourceFile.jpath.toAbsolutePath.toString
     '{sourcecode.File(${Expr(file)})}
   }
 
   def lineImpl(implicit qctx: QuoteContext): Expr[sourcecode.Line] = {
-    import qctx.tasty._
+    import qctx.tasty.{_, given}
     val line = rootPosition.startLine + 1
     '{sourcecode.Line(${Expr(line)})}
   }
@@ -153,13 +153,13 @@ object Macros {
   }
 
   def pkgImpl(implicit qctx: QuoteContext): Expr[Pkg] = {
-    import qctx.tasty._
+    import qctx.tasty.{_, given}
     val path = enclosing(qctx)(_.isPackageDef)
     '{Pkg(${Expr(path)})}
   }
 
   def argsImpl(implicit qctx: QuoteContext): Expr[Args] = {
-    import qctx.tasty._
+    import qctx.tasty.{_, given}
 
     val param: List[List[ValDef]] = {
       def nearestEnclosingMethod(owner: Symbol): List[List[ValDef]] =
@@ -189,7 +189,7 @@ object Macros {
 
 
   def text[T: Type](v: Expr[T])(implicit qctx: QuoteContext): Expr[sourcecode.Text[T]] = {
-    import qctx.tasty._
+    import qctx.tasty.{_, given}
     val txt = v.unseal.pos.sourceCode
     '{sourcecode.Text[T]($v, ${Expr(txt)})}
   }
@@ -203,7 +203,7 @@ object Macros {
   }
 
   def enclosing(qctx: QuoteContext, machine: Boolean = false)(filter: qctx.tasty.Symbol => Boolean): String = {
-    import qctx.tasty._
+    import qctx.tasty.{_, given}
 
     var current = rootContext.owner
     if (!machine)
