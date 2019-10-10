@@ -188,7 +188,7 @@ object Macros {
   }
 
 
-  def text[T: Type](v: Expr[T])(implicit qctx: QuoteContext): Expr[sourcecode.Text[T]] = {
+  def text[T: TypeTag](v: Expr[T])(implicit qctx: QuoteContext): Expr[sourcecode.Text[T]] = {
     import qctx.tasty.{_, given}
     val txt = v.unseal.pos.sourceCode
     '{sourcecode.Text[T]($v, ${Expr(txt)})}
