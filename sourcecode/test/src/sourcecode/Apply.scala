@@ -15,10 +15,13 @@ object Apply {
     assert(pkg == "sourcecode")
 
     val file = sourcecode.File()
-    assert(file.endsWith("/sourcecode/shared/src/test/scala/sourcecode/Apply.scala"))
+    assert(file.endsWith("/sourcecode/Apply.scala"))
+
+    val fileName = sourcecode.FileName()
+    assert(fileName == "Apply.scala")
 
     val line = sourcecode.Line()
-    assert(line == 20)
+    assert(line == 23)
 
     lazy val myLazy = {
       trait Bar{
@@ -26,18 +29,25 @@ object Apply {
         assert(name == "name")
 
         val fullName = sourcecode.FullName()
-        assert(fullName == "sourcecode.Apply.Bar.fullName")
+        assert(
+          fullName == "sourcecode.Apply.Bar.fullName" ||
+          fullName == "sourcecode.Apply._$Bar.fullName"  // Dotty
+        )
 
         val file = sourcecode.File()
-        assert(file.endsWith("/sourcecode/shared/src/test/scala/sourcecode/Apply.scala"))
+        assert(file.endsWith("/sourcecode/Apply.scala"))
+
+        val fileName = sourcecode.FileName()
+        assert(fileName == "Apply.scala")
 
         val line = sourcecode.Line()
-        assert(line == 34)
+        assert(line == 43)
 
         val enclosing = sourcecode.Enclosing()
         assert(
-          (enclosing == "sourcecode.Apply.applyRun myLazy$lzy Bar#enclosing") ||
-          (enclosing == "sourcecode.Apply.applyRun myLazy Bar#enclosing") // encoding changed in Scala 2.12
+          enclosing == "sourcecode.Apply.applyRun myLazy$lzy Bar#enclosing" ||
+          enclosing == "sourcecode.Apply.applyRun myLazy Bar#enclosing" || // encoding changed in Scala 2.12
+          enclosing == "sourcecode.Apply.applyRun myLazy Bar.enclosing"    // Dotty
         )
       }
       val b = new Bar{}
