@@ -208,7 +208,7 @@ object Macros {
 
     val texts0 = param.map(_.foldRight('{List.empty[Text[_]]}) {
       case (vd @ ValDef(nme, _, optV), l) =>
-        '{Text(${optV.fold('None)(_.seal)}, ${Expr(nme)}) :: $l}
+        '{Text(${optV.fold('None)(_.asExpr)}, ${Expr(nme)}) :: $l}
     })
     val texts = texts0.foldRight('{List.empty[List[Text[_]]]}) {
       case (l, acc) =>
@@ -221,7 +221,7 @@ object Macros {
 
   def text[T: Type](v: Expr[T])(using ctx: QuoteContext): Expr[sourcecode.Text[T]] = {
     import ctx.tasty.{given _}
-    val txt = v.unseal.pos.sourceCode
+    val txt = v.asTerm.pos.sourceCode
     '{sourcecode.Text[T]($v, ${Expr(txt)})}
   }
 
