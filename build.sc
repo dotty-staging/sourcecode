@@ -21,7 +21,7 @@ val scalaNativeVersions = for {
 trait SourcecodeModule extends PublishModule {
   def artifactName = "sourcecode"
 
-  def publishVersion = VcsVersion.vcsState().format()
+  def publishVersion = "cb-SNAPSHOT" // hardcoded version for the community build
 
   def pomSettings = PomSettings(
     description = artifactName(),
@@ -36,6 +36,7 @@ trait SourcecodeModule extends PublishModule {
       Developer("lihaoyi", "Li Haoyi", "https://github.com/lihaoyi")
     )
   )
+
 }
 trait SourcecodeMainModule extends CrossScalaModule {
   def millSourcePath = super.millSourcePath / offset
@@ -58,6 +59,18 @@ trait SourcecodeMainModule extends CrossScalaModule {
         )
       )
   )
+
+  // FIXME: somehow we run into TASTy version mismatches if we don't disable
+  // docJar in the community build. This only happens with the sourcecode
+  // project.
+  override def docJar =
+    if (crossScalaVersion.startsWith("2")) super.docJar
+    else T {
+      val outDir = T.ctx().dest
+      val javadocDir = outDir / 'javadoc
+      os.makeDir.all(javadocDir)
+      mill.api.Result.Success(mill.modules.Jvm.createJar(Agg(javadocDir))(outDir))
+    }
 }
 
 
